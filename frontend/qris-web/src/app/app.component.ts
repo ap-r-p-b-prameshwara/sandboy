@@ -8,13 +8,18 @@ import { TransactionListComponent } from './components/transaction-list/transact
   imports: [CommonModule, TransactionListComponent],
   template: `
     <div class="container">
-      <h1>QRIS Transactions</h1>
+      <div class="header">
+        <img src="assets/sandboy.png" alt="Sandboy Logo" class="logo">
+        <h1>QRIS Transactions</h1>
+      </div>
       <app-transaction-list></app-transaction-list>
     </div>
   `,
   styles: [`
     .container { padding: 20px; }
-    h1 { color: #333; }
+    .header { display: flex; align-items: center; }
+    .logo { width: 70px; height: auto; display: inline-block; margin-right: 12px; }
+    h1 { color: #333; margin: 0; }
   `]
 })
 export class AppComponent {}

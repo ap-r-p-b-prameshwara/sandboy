@@ -11,7 +11,10 @@ import { EnvironmentService } from '../../services/environment.service';
   template: `
     <div class="home-container">
       <div class="header">
-        <h1>Welcome to Sandbox</h1>
+        <div class="brand">
+          <img src="assets/sandboy.png" alt="Sandboy Logo" class="logo">
+          <h1>Welcome to Sandbox</h1>
+        </div>
         <button (click)="onLogout()">Logout</button>
       </div>
       <div class="env-switcher">
@@ -30,6 +33,9 @@ import { EnvironmentService } from '../../services/environment.service';
   styles: [`
     .home-container { padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; }
+    .logo { width: 70px; height: auto; display: inline-block; margin-right: 12px; }
+    .brand h1 { margin: 0; }
     .env-switcher { margin: 20px 0; padding: 15px; background: #f5f5f5; }
     select { padding: 8px; margin-left: 10px; }
   `]

@@ -9,7 +9,10 @@ import { AuthService } from '../../services/auth.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="login-container">
-      <h2>Login</h2>
+      <div class="logo-header">
+        <img src="assets/sandboy.png" alt="Sandboy Logo" class="logo">
+        <h2>Login</h2>
+      </div>
       <form (ngSubmit)="onLogin()">
         <input type="text" [(ngModel)]="username" name="username" placeholder="Username" required>
         <input type="password" [(ngModel)]="password" name="password" placeholder="Password" required>
@@ -21,6 +24,9 @@ import { AuthService } from '../../services/auth.service';
   `,
   styles: [`
     .login-container { max-width: 400px; margin: 50px auto; padding: 20px; }
+    .logo-header { display: flex; align-items: center; margin-bottom: 20px; }
+    .logo { width: 70px; height: auto; display: inline-block; margin-right: 12px; }
+    .logo-header h2 { margin: 0; }
     input { display: block; margin: 10px 0; padding: 10px; width: 100%; }
     button { padding: 10px 20px; margin: 5px; }
   `]
