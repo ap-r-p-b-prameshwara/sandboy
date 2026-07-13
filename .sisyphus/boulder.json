@@ -1,0 +1,12 @@
+{
+  "active_plan": "/Users/ap61135/IdeaProjects/sandboy/.sisyphus/plans/poc-sandbox.md",
+  "started_at": "2026-07-13T04:06:17.114Z",
+  "completed_at": "2026-07-13T14:52:00.000Z",
+  "plan_name": "poc-sandbox",
+  "agent": "atlas",
+  "status": "COMPLETED",
+  "tasks_completed": 20,
+  "waves_completed": 4,
+  "final_wave": "APPROVED",
+  "summary": "All 20 implementation tasks, 4 final wave reviews, and 8 acceptance criteria complete. 92 tests passing (43 backend + 49 frontend)."
+}

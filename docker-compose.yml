@@ -1,0 +1,486 @@
+version: '3.8'
+
+services:
+  # ===========================================
+  # DATABASES
+  # ===========================================
+  
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: postgres-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_PROD_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+      - ./docker/postgres-prod/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_PROD_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres-sandbox:
+    image: postgres:16-alpine
+    container_name: postgres-sandbox
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_SANDBOX_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-sandbox-data:/var/lib/postgresql/data
+      - ./docker/postgres-sandbox/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_SANDBOX_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ===========================================
+  # BACKEND SERVICES - PRODUCTION
+  # ===========================================
+
+  user-service-prod:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: user-service-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8081
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-prod:5432/${POSTGRES_PROD_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_SANDBOX_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_SANDBOX_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_SANDBOX_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${USER_SERVICE_PROD_PORT:-8081}:8081"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+      postgres-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  auth-service-prod:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: auth-service-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8083
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-prod:5432/${POSTGRES_PROD_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+    ports:
+      - "${AUTH_SERVICE_PROD_PORT:-8083}:8083"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  gateway-prod:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: gateway-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service-prod:8083
+      - USER_SERVICE_URL=http://user-service-prod:8081
+      - QRIS_SERVICE_URL=http://qris-service-prod:8086
+      - CASHIN_SERVICE_URL=http://cashin-service-prod:8088
+    ports:
+      - "${GATEWAY_PROD_PORT:-8080}:8080"
+    networks:
+      - sandbox-network
+    depends_on:
+      auth-service-prod:
+        condition: service_healthy
+      user-service-prod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  qris-service-prod:
+    build:
+      context: ./backend/qris-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: qris-service-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8086
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-prod:5432/${POSTGRES_PROD_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${QRIS_SERVICE_PROD_PORT:-8086}:8086"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  cashin-service-prod:
+    build:
+      context: ./backend/cashin-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=prod
+    container_name: cashin-service-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8088
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-prod:5432/${POSTGRES_PROD_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${CASHIN_SERVICE_PROD_PORT:-8088}:8088"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  # ===========================================
+  # BACKEND SERVICES - SANDBOX
+  # ===========================================
+
+  user-service-sandbox:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=sandbox
+    container_name: user-service-sandbox
+    environment:
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - SERVER_PORT=8082
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${USER_SERVICE_SANDBOX_PORT:-8082}:8082"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  auth-service-sandbox:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=sandbox
+    container_name: auth-service-sandbox
+    environment:
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - SERVER_PORT=8084
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - AUTH_SERVICE_PROD_URL=http://auth-service-prod:8083
+    ports:
+      - "${AUTH_SERVICE_SANDBOX_PORT:-8084}:8084"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-sandbox:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  gateway-sandbox:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=sandbox
+    container_name: gateway-sandbox
+    environment:
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - SERVER_PORT=8085
+      - AUTH_SERVICE_PROD_URL=http://auth-service-prod:8083
+      - USER_SERVICE_URL=http://user-service-sandbox:8082
+      - QRIS_SERVICE_URL=http://qris-service-sandbox:8087
+      - CASHIN_SERVICE_URL=http://cashin-service-sandbox:8089
+    ports:
+      - "${GATEWAY_SANDBOX_PORT:-8085}:8085"
+    networks:
+      - sandbox-network
+    depends_on:
+      auth-service-prod:
+        condition: service_healthy
+      user-service-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  qris-service-sandbox:
+    build:
+      context: ./backend/qris-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=sandbox
+    container_name: qris-service-sandbox
+    environment:
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - SERVER_PORT=8087
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${QRIS_SERVICE_SANDBOX_PORT:-8087}:8087"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  cashin-service-sandbox:
+    build:
+      context: ./backend/cashin-service
+      dockerfile: Dockerfile
+      args:
+        - SPRING_PROFILE=sandbox
+    container_name: cashin-service-sandbox
+    environment:
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - SERVER_PORT=8089
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${CASHIN_SERVICE_SANDBOX_PORT:-8089}:8089"
+    networks:
+      - sandbox-network
+    depends_on:
+      postgres-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    profiles:
+      - backend
+
+  # ===========================================
+  # FRONTEND SERVICES
+  # ===========================================
+
+  main-web:
+    build:
+      context: ./frontend/main-web
+      dockerfile: Dockerfile
+    container_name: main-web
+    ports:
+      - "${MAIN_WEB_PORT:-4200}:80"
+    networks:
+      - sandbox-network
+    depends_on:
+      gateway-prod:
+        condition: service_healthy
+      gateway-sandbox:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - frontend
+
+  qris-web:
+    build:
+      context: ./frontend/qris-web
+      dockerfile: Dockerfile
+    container_name: qris-web
+    ports:
+      - "${QRIS_WEB_PORT:-4201}:80"
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - frontend
+
+  cashin-web:
+    build:
+      context: ./frontend/cashin-web
+      dockerfile: Dockerfile
+    container_name: cashin-web
+    ports:
+      - "${CASHIN_WEB_PORT:-4202}:80"
+    networks:
+      - sandbox-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - frontend
+
+# ===========================================
+# NETWORKS
+# ===========================================
+
+networks:
+  sandbox-network:
+    driver: bridge
+    name: sandbox-network
+
+# ===========================================
+# VOLUMES
+# ===========================================
+
+volumes:
+  postgres-prod-data:
+    name: sandbox-postgres-prod-data
+  postgres-sandbox-data:
+    name: sandbox-postgres-sandbox-data
+  redis-data:
+    name: sandbox-redis-data

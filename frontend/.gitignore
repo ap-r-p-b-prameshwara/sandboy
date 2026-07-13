@@ -1,0 +1,25 @@
+# Compiled output
+/dist/
+/tmp/
+/out-tsc/
+
+# Dependencies
+/node_modules/
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Angular
+.angular/
+*.log
+
+# Environment
+environment.prod.ts

@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sandbox_prod
+    username: ${POSTGRES_USER:sandbox_user}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+  datasource-sandbox:
+    url: jdbc:postgresql://localhost:5433/sandbox_sandbox
+    username: ${POSTGRES_USER:sandbox_user}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    properties:
+      hibernate:
+        default_schema: users

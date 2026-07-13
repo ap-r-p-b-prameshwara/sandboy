@@ -1,0 +1,83 @@
+package com.sandbox.userservice.service;
+
+import com.sandbox.userservice.dto.RegistrationRequest;
+import com.sandbox.userservice.dto.UserResponse;
+import com.sandbox.userservice.entity.User;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.sql.DataSource;
+import java.time.LocalDateTime;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DualWriteUserService {
+
+    private final DataSource primaryDataSource;
+    private final DataSource sandboxDataSource;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Transactional
+    public UserResponse registerDualWrite(RegistrationRequest request) {
+        log.info("Dual-write registration for: {}", request.getEmail());
+
+        String passwordHash = passwordEncoder.encode(request.getPassword());
+        LocalDateTime now = LocalDateTime.now();
+
+        JdbcTemplate prodJdbc = new JdbcTemplate(primaryDataSource);
+        JdbcTemplate sandboxJdbc = new JdbcTemplate(sandboxDataSource);
+
+        String checkSql = "SELECT COUNT(*) FROM users.user WHERE email = ?";
+        Integer count = prodJdbc.queryForObject(checkSql, Integer.class, request.getEmail());
+        if (count != null && count > 0) {
+            throw new RuntimeException("Email already registered: " + request.getEmail());
+        }
+
+        String insertUserSql = """
+            INSERT INTO users.user (email, password_hash, name, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id
+            """;
+
+        Long prodUserId = prodJdbc.queryForObject(
+            insertUserSql, Long.class,
+            request.getEmail(), passwordHash, request.getName(), now, now
+        );
+
+        log.info("Inserted user in Production DB with id: {}", prodUserId);
+
+        try {
+            Long sandboxUserId = sandboxJdbc.queryForObject(
+                insertUserSql, Long.class,
+                request.getEmail(), passwordHash, request.getName(), now, now
+            );
+            log.info("Inserted user in Sandbox DB with id: {}", sandboxUserId);
+
+            assignPrivileges(prodJdbc, prodUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
+            assignPrivileges(sandboxJdbc, sandboxUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
+
+        } catch (Exception e) {
+            log.error("Failed to write to Sandbox DB, rolling back Production: {}", e.getMessage());
+            prodJdbc.update("DELETE FROM users.user WHERE id = ?", prodUserId);
+            throw new RuntimeException("Registration failed - sandbox DB unavailable", e);
+        }
+
+        return new UserResponse(prodUserId, request.getEmail(), request.getName());
+    }
+
+    private void assignPrivileges(JdbcTemplate jdbc, Long userId, String[] features) {
+        String insertPrivSql = """
+            INSERT INTO privileges.privilege (user_id, feature, enabled, created_at, updated_at)
+            VALUES (?, ?, true, ?, ?)
+            """;
+        LocalDateTime now = LocalDateTime.now();
+        for (String feature : features) {
+            jdbc.update(insertPrivSql, userId, feature, now, now);
+        }
+    }
+}

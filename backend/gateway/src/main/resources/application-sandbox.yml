@@ -1,0 +1,48 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      routes:
+        # Sandbox gateway routes to sandbox services under /sandbox prefix
+        - id: user-service-sandbox
+          uri: lb://user-service-sandbox
+          predicates:
+            - Path=/api/profile,/api/privileges
+          filters:
+            - TokenVerificationFilter
+            - StripPrefix=0
+        
+        - id: qris-service-sandbox
+          uri: lb://qris-service-sandbox
+          predicates:
+            - Path=/api/qris/**
+          filters:
+            - TokenVerificationFilter
+            - StripPrefix=0
+        
+        - id: cashin-service-sandbox
+          uri: lb://cashin-service-sandbox
+          predicates:
+            - Path=/api/cashin/**
+          filters:
+            - TokenVerificationFilter
+            - StripPrefix=0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+
+# Sandbox gateway verifies tokens against PRODUCTION auth service
+auth:
+  service:
+    url: ${AUTH_SERVICE_PROD_URL:http://auth-service-prod:8083}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
