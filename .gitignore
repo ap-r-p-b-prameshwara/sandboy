@@ -32,6 +32,9 @@ bazel-out/
 
 # OS
 .DS_Store
+
+# AI Tools
+.claude_consciousness*
 Thumbs.db
 
 # Env
