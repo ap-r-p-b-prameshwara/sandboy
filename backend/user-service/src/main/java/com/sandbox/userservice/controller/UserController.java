@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,22 @@ public class UserController {
     public ResponseEntity<PrivilegeResponse> getPrivileges(@RequestHeader("X-User-Id") Long userId) {
         PrivilegeResponse response = userService.getPrivileges(userId);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/privileges/grant")
+    public ResponseEntity<?> grantPrivilege(
+            @RequestParam Long userId,
+            @RequestParam String feature) {
+        if (!privilegeRepository.existsByUserIdAndFeature(userId, feature)) {
+            Privilege privilege = new Privilege();
+            privilege.setUserId(userId);
+            privilege.setFeature(feature);
+            privilege.setEnabled(true);
+            privilege.setCreatedAt(LocalDateTime.now());
+            privilege.setUpdatedAt(LocalDateTime.now());
+            privilegeRepository.save(privilege);
+        }
+        return ResponseEntity.ok(Map.of("status", "granted", "feature", feature));
     }
 
     @GetMapping("/users/{email}/sync-data")

@@ -8,5 +8,6 @@ import java.util.List;
 @Repository
 public interface PrivilegeRepository extends JpaRepository<Privilege, Long> {
     List<Privilege> findByUserId(Long userId);
+    boolean existsByUserIdAndFeature(Long userId, String feature);
     void deleteByUserId(Long userId);
 }
