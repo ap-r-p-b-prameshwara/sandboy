@@ -1,0 +1,39 @@
+<div class="transaction-list">
+  <div class="header">
+    <h2>Top Up Transactions</h2>
+    <a routerLink="/cashin/va" class="btn-link">Virtual Accounts</a>
+  </div>
+  
+  <div class="loading" *ngIf="loading">
+    Loading transactions...
+  </div>
+  
+  <div class="empty-state" *ngIf="!loading && transactions.length === 0">
+    No transactions found
+  </div>
+  
+  <table *ngIf="!loading && transactions.length > 0">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Amount</th>
+        <th>VA Number</th>
+        <th>Status</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let tx of transactions">
+        <td>{{ tx.id }}</td>
+        <td>Rp {{ tx.amount | number }}</td>
+        <td class="va-number">{{ tx.vaNumber }}</td>
+        <td>
+          <span class="badge" [ngClass]="getStatusClass(tx.status)">
+            {{ tx.status }}
+          </span>
+        </td>
+        <td>{{ tx.createdAt | date:'medium' }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,39 @@
+<div class="qris-generate">
+  <h2>Generate QRIS</h2>
+  
+  <div class="sandbox-notice" *ngIf="isSandbox">
+    <span class="badge badge-dummy">SANDBOX MODE</span>
+    <p>This QRIS code is for testing purposes only</p>
+  </div>
+  
+  <div class="card form-card">
+    <div class="form-group">
+      <label for="amount">Amount (Rp)</label>
+      <input
+        type="number"
+        id="amount"
+        [(ngModel)]="amount"
+        placeholder="Enter amount"
+        min="1"
+      />
+    </div>
+    
+    <div class="error-message" *ngIf="error">
+      {{ error }}
+    </div>
+    
+    <button (click)="generateQr()" [disabled]="loading">
+      {{ loading ? 'Generating...' : 'Generate QRIS' }}
+    </button>
+  </div>
+  
+  <div class="qr-result" *ngIf="qrCode">
+    <div class="card">
+      <h3>Your QRIS Code</h3>
+      <div class="qr-display">
+        <img [src]="qrCode" alt="QRIS Code" />
+      </div>
+      <p class="amount-display">Amount: Rp {{ amount | number }}</p>
+    </div>
+  </div>
+</div>

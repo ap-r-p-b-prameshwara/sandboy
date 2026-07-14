@@ -8,8 +8,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
@@ -24,8 +22,6 @@ import { MatDividerModule } from '@angular/material/divider';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatSelectModule,
-    MatFormFieldModule,
     MatListModule,
     MatProgressSpinnerModule,
     MatDividerModule
@@ -35,6 +31,10 @@ import { MatDividerModule } from '@angular/material/divider';
       <img src="assets/sandboy.png" alt="Sandboy Logo" class="toolbar-logo">
       <span class="toolbar-title">Sandbox Dashboard</span>
       <span class="spacer"></span>
+      <button mat-button (click)="goToProduction()" class="prod-btn">
+        <mat-icon>swap_horiz</mat-icon>
+        Go to Production
+      </button>
       <button mat-icon-button (click)="onLogout()" matTooltip="Logout" aria-label="Logout">
         <mat-icon>logout</mat-icon>
         <span class="logout-label">Logout</span>
@@ -44,24 +44,9 @@ import { MatDividerModule } from '@angular/material/divider';
     <div class="container">
       <mat-card class="env-card">
         <mat-card-content>
-          <div class="env-row">
-            <mat-form-field appearance="outline" class="env-select">
-              <mat-label>Environment</mat-label>
-              <mat-select
-                [(ngModel)]="selectedEnv"
-                (selectionChange)="onEnvChange()">
-                <mat-option value="production">Production</mat-option>
-                <mat-option value="sandbox">Sandbox</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <span class="env-status" *ngIf="loading">
-              <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
-              <span>Loading...</span>
-            </span>
-          </div>
           <p class="env-info">
-            Environment: <strong>{{ selectedEnv | uppercase }}</strong> |
-            API URL: <code>{{ apiUrl }}</code>
+            Environment: <strong>SANDBOX</strong> |
+            API URL: <code>{{ envService.apiUrl }}</code>
           </p>
           <p>Signed in as <strong>{{ authService.getEmail() }}</strong></p>
         </mat-card-content>
@@ -140,25 +125,14 @@ import { MatDividerModule } from '@angular/material/divider';
       font-size: 1.15rem;
       font-weight: 500;
     }
+    .prod-btn {
+      margin-right: 8px;
+    }
     .logout-label {
       margin-left: 6px;
       font-size: 0.9rem;
     }
     .env-card { margin-bottom: 20px; }
-    .env-row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .env-select { min-width: 220px; }
-    .env-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #666;
-      font-style: italic;
-    }
     .env-info {
       margin: 8px 0 0;
       color: rgba(0, 0, 0, 0.7);
@@ -191,23 +165,20 @@ import { MatDividerModule } from '@angular/material/divider';
   `]
 })
 export class HomeComponent {
-  selectedEnv: 'production' | 'sandbox' = 'production';
-  loading = false;
   activating = false;
   activationError = '';
   hasQrisPrivilege = false;
 
-  get apiUrl(): string {
-    return this.envService.apiUrl;
-  }
-
   constructor(
     public authService: AuthService,
-    private envService: EnvironmentService,
+    public envService: EnvironmentService,
     private http: HttpClient
   ) {
-    this.selectedEnv = this.envService.environment;
     this.checkPrivileges();
+  }
+
+  goToProduction(): void {
+    window.location.href = 'http://localhost:4200';
   }
 
   checkPrivileges(): void {
@@ -232,7 +203,7 @@ export class HomeComponent {
     const token = this.authService.getToken();
     this.http.post(url, {
       merchantName: this.authService.getEmail(),
-      nmid: this.selectedEnv + Date.now(),
+      nmid: 'sandbox' + Date.now(),
       dailyLimit: 10000000
     }, { headers: { Authorization: 'Bearer ' + token } })
       .subscribe({
@@ -245,15 +216,6 @@ export class HomeComponent {
           this.activationError = 'Gagal aktivasi: ' + (err.error?.message || err.message);
         }
       });
-  }
-
-  onEnvChange(): void {
-    if (this.selectedEnv === 'sandbox') {
-      window.location.href = 'http://localhost:4203';
-      return;
-    }
-    this.envService.setEnvironment('production');
-    this.checkPrivileges();
   }
 
   onLogout(): void {
