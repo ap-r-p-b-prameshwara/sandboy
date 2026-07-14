@@ -1,8 +1,9 @@
 package com.sandbox.userservice.config;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -26,15 +27,29 @@ public class DataSourceConfig {
 
     @Primary
     @Bean
-    @ConfigurationProperties(prefix = "spring.datasource")
-    public DataSource primaryDataSource() {
-        return DataSourceBuilder.create().build();
+    public DataSource primaryDataSource(
+            @Value("${SPRING_DATASOURCE_URL}") String url,
+            @Value("${SPRING_DATASOURCE_USERNAME}") String username,
+            @Value("${SPRING_DATASOURCE_PASSWORD}") String password) {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setDriverClassName("org.postgresql.Driver");
+        return new HikariDataSource(config);
     }
 
     @Bean
-    @ConfigurationProperties(prefix = "spring.datasource-sandbox")
-    public DataSource sandboxDataSource() {
-        return DataSourceBuilder.create().build();
+    public DataSource sandboxDataSource(
+            @Value("${SPRING_DATASOURCE_SANDBOX_URL}") String url,
+            @Value("${SPRING_DATASOURCE_SANDBOX_USERNAME}") String username,
+            @Value("${SPRING_DATASOURCE_SANDBOX_PASSWORD}") String password) {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setDriverClassName("org.postgresql.Driver");
+        return new HikariDataSource(config);
     }
 
     @Primary

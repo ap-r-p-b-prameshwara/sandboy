@@ -7,23 +7,45 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: auth-service
-          uri: lb://auth-service-prod
+        - id: user-service
+          uri: http://user-service-prod:8081
           predicates:
-            - Path=/api/login,/api/register
+            - Path=/api/register
           filters:
             - StripPrefix=0
         
-        - id: user-service
-          uri: lb://user-service-prod
+        - id: user-service-profile
+          uri: http://user-service-prod:8081
           predicates:
-            - Path=/api/profile,/api/privileges
+            - Path=/api/profile
           filters:
             - TokenVerificationFilter
             - StripPrefix=0
         
+        - id: user-service-privileges
+          uri: http://user-service-prod:8081
+          predicates:
+            - Path=/api/privileges
+          filters:
+            - TokenVerificationFilter
+            - StripPrefix=0
+        
+        - id: auth-login
+          uri: http://auth-service-prod:8083
+          predicates:
+            - Path=/api/login
+          filters:
+            - StripPrefix=0
+        
+        - id: auth-verify
+          uri: http://auth-service-prod:8083
+          predicates:
+            - Path=/api/verify
+          filters:
+            - StripPrefix=0
+        
         - id: qris-service
-          uri: lb://qris-service-prod
+          uri: http://qris-service-prod:8086
           predicates:
             - Path=/api/qris/**
           filters:
@@ -31,7 +53,7 @@ spring:
             - StripPrefix=0
         
         - id: cashin-service
-          uri: lb://cashin-service-prod
+          uri: http://cashin-service-prod:8088
           predicates:
             - Path=/api/cashin/**
           filters:
@@ -47,6 +69,9 @@ management:
 auth:
   service:
     url: http://auth-service-prod:8083
+
+gateway:
+  environment: production
 
 logging:
   level:

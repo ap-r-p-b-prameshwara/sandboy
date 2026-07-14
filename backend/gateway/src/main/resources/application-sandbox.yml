@@ -43,6 +43,9 @@ auth:
   service:
     url: ${AUTH_SERVICE_PROD_URL:http://auth-service-prod:8083}
 
+gateway:
+  environment: sandbox
+
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG

@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { RegisterComponent } from '../register/register.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RegisterComponent],
   template: `
     <div class="login-container">
       <div class="logo-header">
@@ -40,8 +41,7 @@ export class LoginComponent {
 
   onLogin(): void {
     this.authService.login(this.username, this.password).subscribe({
-      next: (response) => {
-        this.authService.setToken(response.token);
+      next: () => {
         window.location.reload();
       },
       error: (error) => {

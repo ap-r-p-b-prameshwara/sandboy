@@ -1,5 +1,6 @@
 package com.sandbox.gateway.filter;
 
+import com.sandbox.gateway.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -13,9 +14,15 @@ import reactor.core.publisher.Mono;
 public class TokenVerificationFilter extends AbstractGatewayFilterFactory<Object> {
 
     private final WebClient webClient;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public TokenVerificationFilter(@Value("${auth.service.url}") String authServiceUrl) {
+    @Value("${gateway.environment:production}")
+    private String gatewayEnvironment;
+
+    public TokenVerificationFilter(@Value("${auth.service.url}") String authServiceUrl,
+                                    JwtTokenProvider jwtTokenProvider) {
         this.webClient = WebClient.create(authServiceUrl);
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
@@ -30,6 +37,12 @@ public class TokenVerificationFilter extends AbstractGatewayFilterFactory<Object
             }
 
             String token = authHeader.substring(7);
+
+            String tokenEnv = jwtTokenProvider.getEnvironmentFromToken(token);
+            if (!gatewayEnvironment.equals(tokenEnv)) {
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
 
             return webClient.get()
                 .uri("/api/verify")
