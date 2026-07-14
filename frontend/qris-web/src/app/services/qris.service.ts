@@ -6,16 +6,19 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class QrisService {
-  private apiUrl = 'http://localhost:8080';
-
   constructor(private http: HttpClient) {}
 
+  private get baseUrl(): string {
+    const env = localStorage.getItem('appEnvironment') || 'production';
+    return env === 'sandbox' ? 'http://localhost:8085' : 'http://localhost:8080';
+  }
+
   getTransactions(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/qris/transactions`);
+    return this.http.get<any[]>(`${this.baseUrl}/api/qris/transactions`);
   }
 
   getTransaction(id: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/qris/transactions/${id}`);
+    return this.http.get<any>(`${this.baseUrl}/api/qris/transactions/${id}`);
   }
 }
 

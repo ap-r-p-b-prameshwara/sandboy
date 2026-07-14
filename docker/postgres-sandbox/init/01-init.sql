@@ -81,33 +81,33 @@ CREATE INDEX IF NOT EXISTS idx_transaction_merchant_id ON qris_transactions.tran
 CREATE INDEX IF NOT EXISTS idx_transaction_status ON qris_transactions.transactions(status);
 
 -- Virtual Accounts schema tables
-CREATE TABLE IF NOT EXISTS virtual_accounts.virtual_account (
+CREATE TABLE IF NOT EXISTS virtual_accounts.virtual_accounts (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users.user(id),
+    bank_name VARCHAR(100) NOT NULL,
     account_number VARCHAR(50) NOT NULL,
-    bank_code VARCHAR(20) NOT NULL,
-    status VARCHAR(20) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(account_number, bank_code)
-);
-
-CREATE INDEX IF NOT EXISTS idx_va_user_id ON virtual_accounts.virtual_account(user_id);
-CREATE INDEX IF NOT EXISTS idx_va_account_number ON virtual_accounts.virtual_account(account_number);
-
--- Top Up Transactions schema tables
-CREATE TABLE IF NOT EXISTS top_up_transactions.transaction (
-    id BIGSERIAL PRIMARY KEY,
-    virtual_account_id BIGINT NOT NULL REFERENCES virtual_accounts.virtual_account(id),
-    amount DECIMAL(19, 2) NOT NULL,
-    status VARCHAR(20) DEFAULT 'PENDING',
+    account_name VARCHAR(100) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_topup_va_id ON top_up_transactions.transaction(virtual_account_id);
-CREATE INDEX IF NOT EXISTS idx_topup_status ON top_up_transactions.transaction(status);
-CREATE INDEX IF NOT EXISTS idx_topup_created_at ON top_up_transactions.transaction(created_at);
+CREATE INDEX IF NOT EXISTS idx_va_user_id ON virtual_accounts.virtual_accounts(user_id);
+
+-- Top Up Transactions schema tables
+CREATE TABLE IF NOT EXISTS top_up_transactions.top_up_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users.user(id),
+    va_id BIGINT NOT NULL REFERENCES virtual_accounts.virtual_accounts(id),
+    amount DECIMAL(19, 2) NOT NULL,
+    reference VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'PENDING',
+    transaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_topup_user_id ON top_up_transactions.top_up_transactions(user_id);
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON SCHEMA users TO sandbox_user;

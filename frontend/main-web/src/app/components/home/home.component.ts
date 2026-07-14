@@ -4,79 +4,190 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { EnvironmentService } from '../../services/environment.service';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatListModule } from '@angular/material/list';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatToolbarModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSelectModule,
+    MatFormFieldModule,
+    MatListModule,
+    MatProgressSpinnerModule,
+    MatDividerModule
+  ],
   template: `
-    <div class="home-container">
-      <div class="header">
-        <div class="brand">
-          <img src="assets/sandboy.png" alt="Sandboy Logo" class="logo">
-          <h1>Sandbox Dashboard</h1>
-        </div>
-        <button (click)="onLogout()">Logout</button>
-      </div>
+    <mat-toolbar color="primary" class="app-toolbar">
+      <img src="assets/sandboy.png" alt="Sandboy Logo" class="toolbar-logo">
+      <span class="toolbar-title">Sandbox Dashboard</span>
+      <span class="spacer"></span>
+      <button mat-icon-button (click)="onLogout()" matTooltip="Logout" aria-label="Logout">
+        <mat-icon>logout</mat-icon>
+        <span class="logout-label">Logout</span>
+      </button>
+    </mat-toolbar>
 
-      <div class="env-switcher">
-        <label>Environment:</label>
-        <select [(ngModel)]="selectedEnv" (change)="onEnvChange()">
-          <option value="production">Production</option>
-          <option value="sandbox">Sandbox</option>
-        </select>
-        <p *ngIf="loading" class="loading">Loading...</p>
-      </div>
+    <div class="container">
+      <mat-card class="env-card">
+        <mat-card-content>
+          <div class="env-row">
+            <mat-form-field appearance="outline" class="env-select">
+              <mat-label>Environment</mat-label>
+              <mat-select
+                [(ngModel)]="selectedEnv"
+                (selectionChange)="onEnvChange()">
+                <mat-option value="production">Production</mat-option>
+                <mat-option value="sandbox">Sandbox</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <span class="env-status" *ngIf="loading">
+              <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+              <span>Loading...</span>
+            </span>
+          </div>
+          <p class="env-info">
+            Environment: <strong>{{ selectedEnv | uppercase }}</strong> |
+            API URL: <code>{{ apiUrl }}</code>
+          </p>
+          <p>Signed in as <strong>{{ authService.getEmail() }}</strong></p>
+        </mat-card-content>
+      </mat-card>
 
       <div class="main-layout">
-        <div class="sidebar">
-          <ul>
-            <li>Dashboard</li>
-            <li *ngIf="hasQrisPrivilege">QRIS</li>
-            <li>Cash In</li>
-          </ul>
-        </div>
-        <div class="content">
-          <p>Email: {{ authService.getEmail() }}</p>
-          <p>Environment: {{ selectedEnv | uppercase }}</p>
+        <mat-card class="sidebar">
+          <mat-nav-list>
+            <a mat-list-item class="sidebar-item">
+              <mat-icon matListItemIcon>dashboard</mat-icon>
+              <span matListItemTitle>Dashboard</span>
+            </a>
+            <a mat-list-item *ngIf="hasQrisPrivilege" class="sidebar-item">
+              <mat-icon matListItemIcon>qr_code_2</mat-icon>
+              <span matListItemTitle>QRIS</span>
+            </a>
+            <a mat-list-item class="sidebar-item">
+              <mat-icon matListItemIcon>account_balance</mat-icon>
+              <span matListItemTitle>Cash In</span>
+            </a>
+          </mat-nav-list>
+        </mat-card>
 
-          <div *ngIf="!hasQrisPrivilege" class="activation-card">
-            <h3>Aktivasi Merchant QRIS</h3>
-            <p>Aktifkan QRIS untuk menerima pembayaran melalui QR Code.</p>
-            <button (click)="activateQris()" [disabled]="activating">
-              {{ activating ? 'Mengaktifkan...' : 'Aktivasi Sekarang' }}
-            </button>
-            <p *ngIf="activationError" class="error">{{ activationError }}</p>
-          </div>
+        <div class="content">
+          <mat-card *ngIf="!hasQrisPrivilege" class="activation-card">
+            <mat-card-header>
+              <div mat-card-avatar class="activation-avatar">
+                <mat-icon>qr_code</mat-icon>
+              </div>
+              <mat-card-title>Aktivasi Merchant QRIS</mat-card-title>
+              <mat-card-subtitle>Aktifkan QRIS untuk menerima pembayaran</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p>Aktifkan QRIS untuk menerima pembayaran melalui QR Code.</p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-raised-button color="accent" (click)="activateQris()" [disabled]="activating">
+                <mat-icon>flash_on</mat-icon>
+                {{ activating ? 'Mengaktifkan...' : 'Aktivasi Sekarang' }}
+              </button>
+            </mat-card-actions>
+            <mat-card-footer *ngIf="activationError">
+              <p class="activation-error">{{ activationError }}</p>
+            </mat-card-footer>
+          </mat-card>
+
+          <mat-card *ngIf="hasQrisPrivilege" class="activated-card">
+            <mat-card-header>
+              <div mat-card-avatar class="activated-avatar">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <mat-card-title>QRIS Aktif</mat-card-title>
+              <mat-card-subtitle>Anda sudah dapat menerima pembayaran QRIS</mat-card-subtitle>
+            </mat-card-header>
+          </mat-card>
         </div>
       </div>
     </div>
   `,
   styles: [`
-    .home-container { padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; }
-    .logo { width: 70px; height: auto; display: inline-block; margin-right: 12px; }
-    .brand h1 { margin: 0; }
-    .env-switcher { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
-    .loading { color: #666; font-style: italic; }
-    select { padding: 8px; margin-left: 10px; border-radius: 4px; border: 1px solid #ccc; }
-    .main-layout { display: flex; gap: 20px; margin-top: 20px; }
-    .sidebar { width: 200px; background: #f5f5f5; padding: 15px; border-radius: 8px; }
-    .sidebar ul { list-style: none; padding: 0; }
-    .sidebar li { padding: 10px; cursor: pointer; border-radius: 4px; }
-    .sidebar li:hover { background: #e0e0e0; }
-    .content { flex: 1; }
-    .activation-card {
-      background: #fff3cd; border: 1px solid #ffc107;
-      padding: 20px; border-radius: 8px; max-width: 400px;
+    .app-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     }
-    .activation-card button {
-      background: #007bff; color: white; border: none;
-      padding: 10px 20px; border-radius: 4px; cursor: pointer;
+    .toolbar-logo {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+      border-radius: 6px;
+      background: white;
+      object-fit: contain;
     }
-    .activation-card button:disabled { background: #ccc; }
-    .error { color: red; font-size: 12px; }
+    .toolbar-title {
+      font-size: 1.15rem;
+      font-weight: 500;
+    }
+    .logout-label {
+      margin-left: 6px;
+      font-size: 0.9rem;
+    }
+    .env-card { margin-bottom: 20px; }
+    .env-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .env-select { min-width: 220px; }
+    .env-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #666;
+      font-style: italic;
+    }
+    .env-info {
+      margin: 8px 0 0;
+      color: rgba(0, 0, 0, 0.7);
+    }
+    .sidebar-item { cursor: default; }
+    .activation-card,
+    .activated-card {
+      max-width: 520px;
+    }
+    .activation-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff3cd;
+      color: #ff8f00;
+    }
+    .activated-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .activation-error {
+      color: #c62828;
+      font-size: 0.85rem;
+      margin: 0;
+      padding: 8px 16px 16px;
+    }
   `]
 })
 export class HomeComponent {
@@ -85,6 +196,10 @@ export class HomeComponent {
   activating = false;
   activationError = '';
   hasQrisPrivilege = false;
+
+  get apiUrl(): string {
+    return this.envService.apiUrl;
+  }
 
   constructor(
     public authService: AuthService,
@@ -103,7 +218,7 @@ export class HomeComponent {
       .subscribe({
         next: (res) => {
           if (res && res.privileges) {
-            this.hasQrisPrivilege = res.privileges.includes('QRIS');
+            this.hasQrisPrivilege = res.privileges.some((p: any) => p.feature === 'QRIS' && p.enabled);
           }
         },
         error: () => {}
@@ -141,7 +256,11 @@ export class HomeComponent {
           this.loading = false;
           this.checkPrivileges();
         },
-        error: () => this.loading = false
+        error: () => {
+          this.loading = false;
+          this.selectedEnv = 'production';
+          this.envService.setEnvironment('production');
+        }
       });
     } else {
       this.checkPrivileges();

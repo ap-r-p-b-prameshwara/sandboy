@@ -6,16 +6,19 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class CashinService {
-  private apiUrl = 'http://localhost:8080';
-
   constructor(private http: HttpClient) {}
 
+  private get baseUrl(): string {
+    const env = localStorage.getItem('appEnvironment') || 'production';
+    return env === 'sandbox' ? 'http://localhost:8085' : 'http://localhost:8080';
+  }
+
   getVirtualAccounts(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/cashin/va`);
+    return this.http.get<any[]>(`${this.baseUrl}/api/cashin/va`);
   }
 
   getVirtualAccount(id: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/cashin/va/${id}`);
+    return this.http.get<any>(`${this.baseUrl}/api/cashin/va/${id}`);
   }
 }
 
