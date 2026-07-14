@@ -5,15 +5,21 @@ import com.sandbox.qrisservice.dto.GenerateRequest;
 import com.sandbox.qrisservice.dto.QrisResponse;
 import com.sandbox.qrisservice.service.QrisService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/qris")
 public class QrisController {
 
     private final QrisService qrisService;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${user.service.url:http://user-service-prod:8081}")
+    private String userServiceUrl;
 
     public QrisController(QrisService qrisService) {
         this.qrisService = qrisService;
@@ -24,6 +30,16 @@ public class QrisController {
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ActivateRequest request) {
         QrisResponse response = qrisService.activate(userId, request);
+        
+        // Grant QRIS privilege after successful activation
+        try {
+            restTemplate.postForEntity(
+                userServiceUrl + "/api/privileges/grant?userId=" + userId + "&feature=QRIS",
+                null, String.class);
+        } catch (Exception e) {
+            // Log but don't fail - activation already succeeded
+        }
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

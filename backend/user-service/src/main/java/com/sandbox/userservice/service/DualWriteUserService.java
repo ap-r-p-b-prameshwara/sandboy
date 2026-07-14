@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -64,8 +65,9 @@ public class DualWriteUserService {
             );
             log.info("Inserted user in Sandbox DB with id: {}", sandboxUserId);
 
-            assignPrivileges(prodJdbc, prodUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
+            assignPrivileges(prodJdbc, prodUserId, new String[]{"CASH_IN", "DASHBOARD"});
             assignPrivileges(sandboxJdbc, sandboxUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
+            insertMerchant(sandboxJdbc, sandboxUserId);
             insertCredential(prodJdbc, prodUserId, request.getEmail(), passwordHash);
             insertCredential(sandboxJdbc, sandboxUserId, request.getEmail(), passwordHash);
 
@@ -95,5 +97,13 @@ public class DualWriteUserService {
         for (String feature : features) {
             jdbc.update(insertPrivSql, userId, feature, now, now);
         }
+    }
+
+    private void insertMerchant(JdbcTemplate jdbc, Long userId) {
+        String insertMerchantSql = """
+            INSERT INTO qris_merchants.merchants (user_id, merchant_name, nmid, is_active, daily_limit, created_at, updated_at)
+            VALUES (?, ?, ?, true, ?, ?, ?)
+            """;
+        jdbc.update(insertMerchantSql, userId, "Sandbox Merchant", "SB" + userId + "0000", new BigDecimal("10000000"), LocalDateTime.now(), LocalDateTime.now());
     }
 }

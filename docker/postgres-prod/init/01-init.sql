@@ -48,32 +48,36 @@ CREATE TABLE IF NOT EXISTS privileges.privilege (
 CREATE INDEX IF NOT EXISTS idx_privilege_user_id ON privileges.privilege(user_id);
 
 -- QRIS Merchants schema tables
-CREATE TABLE IF NOT EXISTS qris_merchants.merchant (
+CREATE TABLE IF NOT EXISTS qris_merchants.merchants (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users.user(id),
-    merchant_code VARCHAR(50) NOT NULL UNIQUE,
-    status VARCHAR(20) DEFAULT 'PENDING',
+    user_id BIGINT NOT NULL UNIQUE REFERENCES users.user(id),
+    merchant_name VARCHAR(255) NOT NULL,
+    nmid VARCHAR(100) UNIQUE,
+    phone_number VARCHAR(50),
+    is_active BOOLEAN NOT NULL DEFAULT false,
+    daily_limit DECIMAL(19, 2),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_merchant_user_id ON qris_merchants.merchant(user_id);
-CREATE INDEX IF NOT EXISTS idx_merchant_code ON qris_merchants.merchant(merchant_code);
+CREATE INDEX IF NOT EXISTS idx_merchant_user_id ON qris_merchants.merchants(user_id);
 
 -- QRIS Transactions schema tables
-CREATE TABLE IF NOT EXISTS qris_transactions.transaction (
+CREATE TABLE IF NOT EXISTS qris_transactions.transactions (
     id BIGSERIAL PRIMARY KEY,
-    merchant_id BIGINT NOT NULL REFERENCES qris_merchants.merchant(id),
+    merchant_id BIGINT NOT NULL REFERENCES qris_merchants.merchants(id),
+    transaction_id VARCHAR(100) NOT NULL UNIQUE,
     amount DECIMAL(19, 2) NOT NULL,
-    qr_code TEXT NOT NULL,
+    customer_reference VARCHAR(255),
     status VARCHAR(20) DEFAULT 'PENDING',
+    qris_code TEXT,
+    transaction_type VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_transaction_merchant_id ON qris_transactions.transaction(merchant_id);
-CREATE INDEX IF NOT EXISTS idx_transaction_status ON qris_transactions.transaction(status);
-CREATE INDEX IF NOT EXISTS idx_transaction_created_at ON qris_transactions.transaction(created_at);
+CREATE INDEX IF NOT EXISTS idx_transaction_merchant_id ON qris_transactions.transactions(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_status ON qris_transactions.transactions(status);
 
 -- Virtual Accounts schema tables
 CREATE TABLE IF NOT EXISTS virtual_accounts.virtual_account (

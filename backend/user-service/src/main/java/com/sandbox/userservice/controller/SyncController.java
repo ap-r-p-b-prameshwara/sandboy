@@ -8,11 +8,14 @@ import com.sandbox.userservice.repository.PrivilegeRepository;
 import com.sandbox.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -25,17 +28,20 @@ public class SyncController {
     private final PrivilegeRepository privilegeRepository;
     private final CredentialRepository credentialRepository;
     private final RestTemplate restTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${user.service.prod.url:http://user-service-prod:8081}")
     private String prodServiceUrl;
 
     public SyncController(UserRepository userRepository,
                           PrivilegeRepository privilegeRepository,
-                          CredentialRepository credentialRepository) {
+                          CredentialRepository credentialRepository,
+                          DataSource dataSource) {
         this.userRepository = userRepository;
         this.privilegeRepository = privilegeRepository;
         this.credentialRepository = credentialRepository;
         this.restTemplate = new RestTemplate();
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 
     @PostMapping
@@ -99,6 +105,12 @@ public class SyncController {
                     privilegeRepository.save(privilege);
                 }
             }
+
+            String insertMerchantSql = """
+                INSERT INTO qris_merchants.merchants (user_id, merchant_name, nmid, is_active, daily_limit, created_at, updated_at)
+                VALUES (?, ?, ?, true, ?, ?, ?)
+                """;
+            jdbcTemplate.update(insertMerchantSql, savedUser.getId(), "Sandbox Merchant", "SB" + savedUser.getId() + "0000", new BigDecimal("10000000"), LocalDateTime.now(), LocalDateTime.now());
 
             return ResponseEntity.ok(Map.of("status", "synced", "userId", savedUser.getId()));
 
