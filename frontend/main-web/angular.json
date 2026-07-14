@@ -56,10 +56,7 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular-architects/module-federation:serve",
-          "options": {
-            "port": 4200
-          },
+          "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
               "buildTarget": "main-web:build:production"

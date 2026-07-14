@@ -29,6 +29,10 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(Long userId, String email) {
+        return generateToken(userId, email, environment);
+    }
+
+    public String generateToken(Long userId, String email, String environment) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("email", email);

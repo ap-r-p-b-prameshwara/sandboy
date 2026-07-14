@@ -3,8 +3,8 @@ package com.sandbox.userservice.service;
 import com.sandbox.userservice.dto.RegistrationRequest;
 import com.sandbox.userservice.dto.UserResponse;
 import com.sandbox.userservice.entity.User;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,12 +15,18 @@ import java.time.LocalDateTime;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DualWriteUserService {
 
     private final DataSource primaryDataSource;
     private final DataSource sandboxDataSource;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public DualWriteUserService(
+            @Qualifier("primaryDataSource") DataSource primaryDataSource,
+            @Qualifier("sandboxDataSource") DataSource sandboxDataSource) {
+        this.primaryDataSource = primaryDataSource;
+        this.sandboxDataSource = sandboxDataSource;
+    }
 
     @Transactional
     public UserResponse registerDualWrite(RegistrationRequest request) {
@@ -60,6 +66,8 @@ public class DualWriteUserService {
 
             assignPrivileges(prodJdbc, prodUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
             assignPrivileges(sandboxJdbc, sandboxUserId, new String[]{"QRIS", "CASH_IN", "DASHBOARD"});
+            insertCredential(prodJdbc, prodUserId, request.getEmail(), passwordHash);
+            insertCredential(sandboxJdbc, sandboxUserId, request.getEmail(), passwordHash);
 
         } catch (Exception e) {
             log.error("Failed to write to Sandbox DB, rolling back Production: {}", e.getMessage());
@@ -68,6 +76,14 @@ public class DualWriteUserService {
         }
 
         return new UserResponse(prodUserId, request.getEmail(), request.getName());
+    }
+
+    private void insertCredential(JdbcTemplate jdbc, Long userId, String email, String passwordHash) {
+        String insertCredSql = """
+            INSERT INTO credentials.credential (user_id, email, password_hash, created_at)
+            VALUES (?, ?, ?, ?)
+            """;
+        jdbc.update(insertCredSql, userId, email, passwordHash, LocalDateTime.now());
     }
 
     private void assignPrivileges(JdbcTemplate jdbc, Long userId, String[] features) {

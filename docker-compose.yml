@@ -97,7 +97,7 @@ services:
       postgres-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -134,7 +134,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -153,6 +153,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SERVER_PORT=8080
+      - JWT_SECRET=${JWT_SECRET}
       - AUTH_SERVICE_URL=http://auth-service-prod:8083
       - USER_SERVICE_URL=http://user-service-prod:8081
       - QRIS_SERVICE_URL=http://qris-service-prod:8086
@@ -167,7 +168,7 @@ services:
       user-service-prod:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -197,7 +198,7 @@ services:
       postgres-prod:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -227,7 +228,7 @@ services:
       postgres-prod:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -253,6 +254,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_SANDBOX_URL=jdbc:postgresql://postgres-sandbox:5432/${POSTGRES_SANDBOX_DB}
+      - SPRING_DATASOURCE_SANDBOX_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_SANDBOX_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "${USER_SERVICE_SANDBOX_PORT:-8082}:8082"
     networks:
@@ -261,7 +265,7 @@ services:
       postgres-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -299,7 +303,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -318,6 +322,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=sandbox
       - SERVER_PORT=8085
+      - JWT_SECRET=${JWT_SECRET}
       - AUTH_SERVICE_PROD_URL=http://auth-service-prod:8083
       - USER_SERVICE_URL=http://user-service-sandbox:8082
       - QRIS_SERVICE_URL=http://qris-service-sandbox:8087
@@ -332,7 +337,7 @@ services:
       user-service-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -362,7 +367,7 @@ services:
       postgres-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -392,7 +397,7 @@ services:
       postgres-sandbox:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health/readiness"]
       interval: 30s
       timeout: 10s
       retries: 3
