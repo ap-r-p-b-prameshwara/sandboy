@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LoginComponent } from './components/login/login.component';
-import { RegisterComponent } from './components/register/register.component';
 import { HomeComponent } from './components/home/home.component';
 import { EnvironmentService } from './services/environment.service';
 import { MatCardModule } from '@angular/material/card';
@@ -14,23 +13,20 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [
     CommonModule,
     LoginComponent,
-    RegisterComponent,
     HomeComponent,
     MatCardModule,
     MatButtonModule,
     MatIconModule
   ],
   template: `
-    <!-- Production: show login/register -->
-    <ng-container *ngIf="envService.environment === 'production'">
-      <app-login *ngIf="!isLoggedIn"></app-login>
-      <app-home *ngIf="isLoggedIn"></app-home>
+    <app-home *ngIf="isLoggedIn"></app-home>
+
+    <ng-container *ngIf="!isLoggedIn && envService.environment === 'production'">
+      <app-login></app-login>
     </ng-container>
-    
-    <!-- Sandbox: require login from production -->
-    <ng-container *ngIf="envService.environment === 'sandbox'">
-      <app-home *ngIf="isLoggedIn"></app-home>
-      <div *ngIf="!isLoggedIn" class="sandbox-redirect-wrapper">
+
+    <ng-container *ngIf="!isLoggedIn && envService.environment === 'sandbox'">
+      <div class="sandbox-redirect-wrapper">
         <mat-card class="sandbox-card">
           <mat-card-header>
             <div mat-card-avatar class="sandbox-avatar">
@@ -54,16 +50,11 @@ import { MatIconModule } from '@angular/material/icon';
   `,
   styles: [`
     .sandbox-redirect-wrapper {
-      max-width: 480px;
-      margin: 60px auto;
-      padding: 20px;
+      max-width: 480px; margin: 60px auto; padding: 20px;
     }
     .sandbox-avatar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #e3f2fd;
-      color: #1976d2;
+      display: flex; align-items: center; justify-content: center;
+      background: #e3f2fd; color: #1976d2;
     }
   `]
 })
