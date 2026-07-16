@@ -185,3 +185,72 @@ Lombok annotation processor not registered in maven-compiler-plugin annotationPr
 - **No Lombok**: Plain getters/setters/constructors
 - **Constructor injection**: Used throughout
 - **Response DTOs**: Nested data classes (VirtualAccountData, TransactionData)
+
+## Frontend Angular Apps - Local Startup (2026-07-13)
+
+### Running Apps (3 microfrontends):
+| App | Port | Status | URL |
+|-----|------|--------|-----|
+| main-web | 4200 | ✅ Running | http://localhost:4200 |
+| qris-web | 4201 | ✅ Running | http://localhost:4201 |
+| cashin-web | 4202 | ✅ Running | http://localhost:4202 |
+
+### Key Issues Fixed:
+
+1. **`@angular-architects/module-federation` version mismatch**: The initial `npm install` installed v21.2.2 (latest) but the project uses Angular 18. Had to pin to `@angular-architects/module-federation@^18.0.6`.
+
+2. **Missing `serve` builder**: In v18.x of `@angular-architects/module-federation`, the `serve` builder was removed. `builders.json` only contains `build`. The angular.json was referencing `@angular-architects/module-federation:serve` which doesn't exist. Fixed by changing to `"builder": "@angular-devkit/build-angular:dev-server"` in all 3 angular.json files.
+
+3. **main-web compilation error**: `LoginComponent` used `<app-register>` in its template but didn't import `RegisterComponent`. Fixed by adding `import { RegisterComponent } from '../register/register.component'` and including it in the `imports` array.
+
+### Commands to start:
+```bash
+# For each project:
+npm install @angular-architects/module-federation@^18.0.6 --save
+nohup npx ng serve --host 0.0.0.0 --port {PORT} > /tmp/{app}.log 2>&1 &
+```
+
+### PIDs:
+- main-web: 78146
+- qris-web: 77986
+- cashin-web: 78008
+
+### Logs:
+- main-web: `/tmp/main-web.log`
+- qris-web: `/tmp/qris-web.log`
+- cashin-web: `/tmp/cashin-web.log`
+
+## On-Demand User Sync from Production to Sandbox (2026-07-14)
+
+### Architecture
+- **Flow**: `auth-service-sandbox` → `user-service-sandbox` (POST /api/sync) → `user-service-prod` (GET /api/users/{email}/sync-data)
+- **Trigger**: Login attempt on sandbox fails with "Not found in sandbox"
+- **Internal communication**: Docker network (`sandbox-network`), services reachable by container name
+
+### Files Created (2):
+- `backend/user-service/.../entity/Credential.java` - JPA entity for `credentials.credential` table
+- `backend/user-service/.../repository/CredentialRepository.java` - JPA repository with `findByEmail(String)`
+- `backend/user-service/.../controller/SyncController.java` - POST /api/sync endpoint
+
+### Files Modified (3):
+- `backend/user-service/.../controller/UserController.java`:
+  - Added `UserRepository`, `CredentialRepository`, `PrivilegeRepository` as constructor-injected fields
+  - Added `GET /api/users/{email}/sync-data` endpoint returning user + credential + privileges
+- `backend/auth-service/.../service/AuthService.java`:
+  - Added `RestTemplate` field (inline init, excluded from @RequiredArgsConstructor)
+  - Added `sandboxServiceUrl` via @Value
+  - Changed credential-not-found exception to "Not found in sandbox" for sandbox detection
+  - Wrapped login in try-catch: on "Not found in sandbox" in sandbox env → sync from prod → retry
+- `backend/gateway/.../GatewayApplication.java`:
+  - Added `/api/sync` route → `http://user-service-sandbox:8082` (no token verification)
+
+### Key Design Decisions
+- Credential entity in user-service is plain (no Lombok) with manual getters/setters to avoid annotation processor dependency issues
+- `SyncController` uses manual constructor injection instead of `@RequiredArgsConstructor` to keep RestTemplate initialization explicit
+- The auth-service calls user-service-sandbox DIRECTLY (not through gateway) for sync, since it's on the same Docker network
+- Gateway route for `/api/sync` added primarily for debugging/admin access
+- `DualWriteUserService` left untouched - registration still dual-writes to both DBs
+
+### Verification
+- Build not possible locally (JDK 21 vs pom.xml Java 25 requirement) - pre-existing constraint
+- Code is structurally verified: all imports correct, constructor injection consistent, Lombok usage matches existing patterns

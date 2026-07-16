@@ -1,26 +1,56 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VaListComponent } from './components/va-list/va-list.component';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, VaListComponent],
+  imports: [
+    CommonModule,
+    VaListComponent,
+    MatToolbarModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule
+  ],
   template: `
+    <mat-toolbar color="primary" class="app-toolbar">
+      <img src="assets/sandboy.png" alt="Sandboy Logo" class="toolbar-logo">
+      <span class="toolbar-title">Virtual Accounts</span>
+    </mat-toolbar>
+
     <div class="container">
-      <div class="header">
-        <img src="assets/sandboy.png" alt="Sandboy Logo" class="logo">
-        <h1>Virtual Accounts</h1>
-      </div>
-      <app-va-list></app-va-list>
+      <mat-card class="content-card">
+        <mat-card-content>
+          <app-va-list></app-va-list>
+        </mat-card-content>
+      </mat-card>
     </div>
   `,
   styles: [`
-    .container { padding: 20px; }
-    .header { display: flex; align-items: center; }
-    .logo { width: 70px; height: auto; display: inline-block; margin-right: 12px; }
-    h1 { color: #333; margin: 0; }
+    .app-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+    .toolbar-logo {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+      border-radius: 6px;
+      background: white;
+      object-fit: contain;
+    }
+    .toolbar-title {
+      font-size: 1.15rem;
+      font-weight: 500;
+    }
+    .content-card { margin-top: 20px; }
   `]
 })
 export class AppComponent {}
-

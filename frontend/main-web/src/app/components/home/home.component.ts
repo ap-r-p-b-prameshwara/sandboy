@@ -34,7 +34,19 @@ import { MatDividerModule } from '@angular/material/divider';
     <mat-toolbar color="primary" class="app-toolbar">
       <img src="assets/sandboy.png" alt="Sandboy Logo" class="toolbar-logo">
       <span class="toolbar-title">Sandbox Dashboard</span>
+      <span *ngIf="selectedEnv === 'sandbox'" class="sandbox-badge">SANDBOX</span>
       <span class="spacer"></span>
+      <mat-form-field appearance="outline" class="env-select-toolbar">
+        <mat-select
+          [(ngModel)]="selectedEnv"
+          (selectionChange)="onEnvChange()">
+          <mat-option value="production">Production</mat-option>
+          <mat-option value="sandbox">Sandbox</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <span class="env-status" *ngIf="loading">
+        <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
+      </span>
       <button mat-icon-button (click)="onLogout()" matTooltip="Logout" aria-label="Logout">
         <mat-icon>logout</mat-icon>
         <span class="logout-label">Logout</span>
@@ -44,21 +56,6 @@ import { MatDividerModule } from '@angular/material/divider';
     <div class="container">
       <mat-card class="env-card">
         <mat-card-content>
-          <div class="env-row">
-            <mat-form-field appearance="outline" class="env-select">
-              <mat-label>Environment</mat-label>
-              <mat-select
-                [(ngModel)]="selectedEnv"
-                (selectionChange)="onEnvChange()">
-                <mat-option value="production">Production</mat-option>
-                <mat-option value="sandbox">Sandbox</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <span class="env-status" *ngIf="loading">
-              <mat-progress-spinner diameter="20" mode="indeterminate"></mat-progress-spinner>
-              <span>Loading...</span>
-            </span>
-          </div>
           <p class="env-info">
             Environment: <strong>{{ selectedEnv | uppercase }}</strong> |
             API URL: <code>{{ apiUrl }}</code>
@@ -74,13 +71,13 @@ import { MatDividerModule } from '@angular/material/divider';
               <mat-icon matListItemIcon>dashboard</mat-icon>
               <span matListItemTitle>Dashboard</span>
             </a>
-            <a mat-list-item *ngIf="hasQrisPrivilege" class="sidebar-item">
+            <a mat-list-item class="sidebar-item" href="{{ qrisUrl }}" target="_blank" *ngIf="hasQrisPrivilege">
               <mat-icon matListItemIcon>qr_code_2</mat-icon>
-              <span matListItemTitle>QRIS</span>
+              <span matListItemTitle>QRIS ({{ selectedEnv }})</span>
             </a>
-            <a mat-list-item class="sidebar-item">
+            <a mat-list-item class="sidebar-item" href="{{ cashinUrl }}" target="_blank">
               <mat-icon matListItemIcon>account_balance</mat-icon>
-              <span matListItemTitle>Cash In</span>
+              <span matListItemTitle>Cash In ({{ selectedEnv }})</span>
             </a>
           </mat-nav-list>
         </mat-card>
@@ -140,28 +137,44 @@ import { MatDividerModule } from '@angular/material/divider';
       font-size: 1.15rem;
       font-weight: 500;
     }
+    .sandbox-badge {
+      background: #ff5722;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+    .env-select-toolbar {
+      min-width: 160px;
+      margin-right: 8px;
+      font-size: 0.85rem;
+    }
+    .env-select-toolbar ::ng-deep .mdc-notched-outline__leading,
+    .env-select-toolbar ::ng-deep .mdc-notched-outline__trailing,
+    .env-select-toolbar ::ng-deep .mdc-notched-outline__notch {
+      border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+    .env-select-toolbar ::ng-deep .mat-mdc-select-value-text,
+    .env-select-toolbar ::ng-deep .mat-mdc-select-arrow {
+      color: white !important;
+    }
+    .env-select-toolbar ::ng-deep .mat-mdc-select-min-line {
+      color: white !important;
+    }
     .logout-label {
       margin-left: 6px;
       font-size: 0.9rem;
     }
     .env-card { margin-bottom: 20px; }
-    .env-row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .env-select { min-width: 220px; }
-    .env-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #666;
-      font-style: italic;
-    }
     .env-info {
       margin: 8px 0 0;
       color: rgba(0, 0, 0, 0.7);
+    }
+    .env-status {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 8px;
     }
     .sidebar-item { cursor: default; }
     .activation-card,
@@ -199,6 +212,18 @@ export class HomeComponent {
 
   get apiUrl(): string {
     return this.envService.apiUrl;
+  }
+
+  get qrisUrl(): string {
+    return this.envService.environment === 'production'
+      ? 'http://localhost:4201'
+      : 'http://localhost:4204';
+  }
+
+  get cashinUrl(): string {
+    return this.envService.environment === 'production'
+      ? 'http://localhost:4202'
+      : 'http://localhost:4205';
   }
 
   constructor(
@@ -248,12 +273,23 @@ export class HomeComponent {
   }
 
   onEnvChange(): void {
-    if (this.selectedEnv === 'sandbox') {
-      window.location.href = 'http://localhost:4203';
-      return;
+    this.envService.setEnvironment(this.selectedEnv);
+    if (this.selectedEnv === 'sandbox' && !this.authService.getSandboxToken()) {
+      this.loading = true;
+      this.authService.requestSandboxToken().subscribe({
+        next: () => {
+          this.loading = false;
+          this.checkPrivileges();
+        },
+        error: () => {
+          this.loading = false;
+          this.selectedEnv = 'production';
+          this.envService.setEnvironment('production');
+        }
+      });
+    } else {
+      this.checkPrivileges();
     }
-    this.envService.setEnvironment('production');
-    this.checkPrivileges();
   }
 
   onLogout(): void {

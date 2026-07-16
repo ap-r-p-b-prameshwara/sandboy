@@ -1,0 +1,23 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - img "Sandboy Logo" [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: Login
+      - generic [ref=e11]: Sign in to your Sandbox account
+  - generic [ref=e13]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - text: Email
+        - generic [ref=e18]: "*"
+      - textbox "Email" [ref=e20]
+      - img [ref=e22]: email
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - text: Password
+        - generic [ref=e28]: "*"
+      - textbox "Password" [ref=e30]
+      - img [ref=e32]: lock
+  - generic [ref=e34]:
+    - button "Register" [ref=e35]
+    - button "Login" [ref=e39]:
+      - img [ref=e40]: login

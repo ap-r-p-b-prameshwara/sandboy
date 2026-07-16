@@ -12,22 +12,22 @@ export class AuthService {
 
   constructor(private http: HttpClient, private envService: EnvironmentService) {}
 
-  login(username: string, password: string): Observable<{token: string}> {
-    return this.http.post<{token: string}>(`${this.PROD_AUTH_URL}/auth/login`, { username, password }).pipe(
+  login(email: string, password: string): Observable<{token: string}> {
+    return this.http.post<{token: string}>(`${this.PROD_AUTH_URL}/api/login`, { email, password }).pipe(
       tap(response => {
         this.setToken(response.token);
-        this.setEmail(username);
+        this.setEmail(email);
       })
     );
   }
 
-  register(username: string, password: string, email: string): Observable<any> {
-    return this.http.post(`${this.PROD_AUTH_URL}/auth/register`, { username, password, email });
+  register(name: string, password: string, email: string): Observable<any> {
+    return this.http.post(`${this.PROD_AUTH_URL}/api/register`, { email, password, name });
   }
 
   requestSandboxToken(): Observable<{token: string}> {
     const email = this.getEmail();
-    return this.http.post<{token: string}>(`${this.SANDBOX_AUTH_URL}/auth/login`, { email }).pipe(
+    return this.http.post<{token: string}>(`${this.SANDBOX_AUTH_URL}/api/login`, { email }).pipe(
       tap(response => {
         this.setSandboxToken(response.token);
       })
